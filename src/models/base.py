@@ -1,14 +1,17 @@
 import numpy as np
 import pandas as pd
-from typing import Dict
+import matplotlib.pyplot as plt
+from typing import Dict, Union
 from sklift.metrics import (
     uplift_auc_score,
     perfect_uplift_curve,
     uplift_curve,
     qini_curve,
     perfect_qini_curve,
-    qini_auc_score
+    qini_auc_score,
 )
+
+from src.conf import settings
 
 
 class BaseUpliftModel:
@@ -16,9 +19,8 @@ class BaseUpliftModel:
         self,
         training_dataset: pd.DataFrame,
         testing_dataset: pd.DataFrame,
-        treatment_nm: str,
-        target_nm: str
-
+        treatment_nm: str = settings.data.treatment_nm,
+        target_nm: str = settings.data.target_nm,
     ):
         self.train, self.test = training_dataset, testing_dataset
 
@@ -26,10 +28,13 @@ class BaseUpliftModel:
         self.target_nm = target_nm
 
         if not set(self.train.columns) == set(self.test.columns):
-            raise RuntimeError('Columns at train and test subsets are mismatched')
+            raise RuntimeError(
+                "Columns at train and test subsets are mismatched"
+            )
 
         self.feature_columns = [
-            c for c in self.train.columns
+            c
+            for c in self.train.columns
             if c not in (self.treatment_nm, self.target_nm)
         ]
 
@@ -41,12 +46,72 @@ class BaseUpliftModel:
 
     def compute_metrics(self) -> Dict[str, float]:
         args = {
-            'y_true': self.test[self.target_nm],
-            'uplift': self.predict(self.test[self.feature_columns]),
-            'treatment': self.test[self.treatment_nm]
+            "y_true": self.test[self.target_nm],
+            "uplift": self.predict(self.test[self.feature_columns]),
+            "treatment": self.test[self.treatment_nm],
         }
 
         return {
-            'uplift_auc_score': uplift_auc_score(**args),
-            'qini_auc_score': qini_auc_score(**args)
+            "uplift_auc_score": uplift_auc_score(**args),
+            "qini_auc_score": qini_auc_score(**args),
         }
+
+    def draw_uplift_curve(
+        self,
+        target_true: Union[pd.Series, np.ndarray],
+        uplift_predicted: np.ndarray,
+        treatment_true: Union[pd.Series, np.ndarray],
+        with_perfect: bool = True
+    ) -> None:
+        plt.title('Uplift curve')
+        if with_perfect:
+            curve_perfect = perfect_uplift_curve(
+                y_true=target_true, treatment=treatment_true
+            )
+            plt.plot(
+                *curve_perfect, **settings.model.plotting_cfg, label='perfect'
+            )
+
+        curve_model = uplift_curve(
+            y_true=target_true,
+            uplift=uplift_predicted,
+            treatment=treatment_true
+        )
+
+        plt.plot(
+            *curve_model,
+            **settings.model.plotting_cfg,
+            label='model'
+        )
+
+        plt.show()
+
+    @staticmethod
+    def draw_qini_curve(
+        target_true: Union[pd.Series, np.ndarray],
+        uplift_predicted: np.ndarray,
+        treatment_true: Union[pd.Series, np.ndarray],
+        with_perfect: bool = True
+    ) -> None:
+        plt.title('Qini curve')
+        if with_perfect:
+            curve_perfect = perfect_qini_curve(
+                y_true=target_true, treatment=treatment_true
+            )
+            plt.plot(
+                *curve_perfect, **settings.model.plotting_cfg, label='perfect'
+            )
+
+        curve_model = qini_curve(
+            y_true=target_true,
+            uplift=uplift_predicted,
+            treatment=treatment_true
+        )
+
+        plt.plot(
+            *curve_model,
+            **settings.model.plotting_cfg,
+            label='model'
+        )
+
+        plt.show()
