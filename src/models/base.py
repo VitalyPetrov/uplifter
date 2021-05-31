@@ -56,8 +56,8 @@ class BaseUpliftModel:
             "qini_auc_score": qini_auc_score(**args),
         }
 
+    @staticmethod
     def draw_uplift_curve(
-        self,
         target_true: Union[pd.Series, np.ndarray],
         uplift_predicted: np.ndarray,
         treatment_true: Union[pd.Series, np.ndarray],
@@ -82,6 +82,13 @@ class BaseUpliftModel:
             *curve_model,
             **settings.model.plotting_cfg,
             label='model'
+        )
+
+        plt.plot(
+            (curve_model[0][0], curve_model[0][-1]),
+            (curve_model[1][0], curve_model[1][-1]),
+            **settings.model.plotting_cfg,
+            label='random'
         )
 
         plt.show()
@@ -112,6 +119,13 @@ class BaseUpliftModel:
             *curve_model,
             **settings.model.plotting_cfg,
             label='model'
+        )
+
+        plt.plot(
+            (curve_model[0][0], curve_model[0][-1]),
+            (curve_model[1][0], curve_model[1][-1]),
+            **settings.model.plotting_cfg,
+            label='random'
         )
 
         plt.show()
